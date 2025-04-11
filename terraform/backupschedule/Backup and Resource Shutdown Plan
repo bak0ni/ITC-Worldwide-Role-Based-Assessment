@@ -1,0 +1,30 @@
+Logic App 1: VM Snapshots to Immutable Cold Storage
+
+Runs daily at 1:00 AM UTC
+Lists all VMs in your subscription
+Creates a snapshot of each VM
+Stores snapshots in immutable cold storage with a 30-day retention policy
+Includes proper tagging for management
+
+Logic App 2: VM Scheduling
+
+Has two schedules:
+
+Deallocates all VMs at 4:15 PM UTC on weekdays
+Starts all VMs at 6:45 AM UTC on weekdays
+
+
+
+Key Features:
+
+Uses managed identities with proper RBAC permissions
+Implements immutability policies for snapshots
+Uses Azure Storage blob for cold storage
+Includes proper error handling and workflow logic
+Provides outputs for accessing the Logic Apps
+
+To deploy, you'll need to:
+
+Authenticate to Azure (az login)
+Initialize Terraform (terraform init)
+Apply the configuration (terraform apply)
