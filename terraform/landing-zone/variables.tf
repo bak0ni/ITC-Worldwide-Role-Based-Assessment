@@ -11,7 +11,7 @@ variable "frc-pyt-vnet-cidr" {
 
 variable "frc-dotnet-vnet-cidr" {
   type    = string
-  default = "10.10.0.0/16"
+  default = "10.1.0.0/16"
 }
 
 variable "tags" {
