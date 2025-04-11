@@ -21,29 +21,29 @@ parameters:
   displayName: 'Target vNets for VDI deployment'
   type: object
   default:
-    - name: 'vnet1-region1'
+    - name: 'frc-pyt-vnet'
       deploy: true
-    - name: 'vnet2-region1'
+    - name: 'frc-dotnet-vnet'
       deploy: false
-    - name: 'vnet3-region1'
+    - name: 'frc-game-vnet'
       deploy: false
-    - name: 'vnet4-region1'
+    - name: 'frc-spec-vnet'
       deploy: false
-    - name: 'vnet1-region2'
+    - name: 'itn-pyt-vnet'
       deploy: false
-    - name: 'vnet2-region2'
+    - name: 'itn-dotnet-vnet'
       deploy: false
-    - name: 'vnet3-region2'
+    - name: 'itn-game-vnet'
       deploy: false
-    - name: 'vnet4-region2'
+    - name: 'itn-spec-vnet'
       deploy: false
-    - name: 'vnet1-region3'
+    - name: 'uks-pyt-vnet'
       deploy: false
-    - name: 'vnet2-region3'
+    - name: 'uks-dotnet-vnet'
       deploy: false
-    - name: 'vnet3-region3'
+    - name: 'uks-game-vnet'
       deploy: false
-    - name: 'vnet4-region3'
+    - name: 'uks-spec-vnet'
       deploy: false
 
 variables:
