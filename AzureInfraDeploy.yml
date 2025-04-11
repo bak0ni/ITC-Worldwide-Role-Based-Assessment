@@ -1,0 +1,136 @@
+# azure-pipelines-landing-zone.yml
+name: 'Terraform Landing Zone Deployment'
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - 'terraform/landing-zone/**'
+
+parameters:
+- name: environment
+  displayName: 'Environment to deploy'
+  type: string
+  default: 'development'
+  values:
+  - 'development'
+  - 'production'
+
+variables:
+  - group: terraform-secrets-${{ parameters.environment }}
+  - name: terraformVersion
+    value: '1.6.6'
+  - name: terraformDirectory
+    value: '$(System.DefaultWorkingDirectory)/terraform/landing-zone'
+  - name: backendResourceGroup
+    value: 'terraform-state-${{ parameters.environment }}-rg'
+  - name: backendStorageAccount
+    value: 'tfstate${{ parameters.environment }}sa'
+  - name: backendContainerName
+    value: 'tfstate'
+  - name: backendKey
+    value: 'landing-zone.tfstate'
+
+stages:
+- stage: Validate
+  displayName: 'Validate Terraform Configuration'
+  jobs:
+  - job: Validate
+    displayName: 'Validate'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Azure Login'
+      inputs:
+        azureSubscription: '${{ parameters.environment }}-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az --version
+          az account show
+    
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform $(terraformVersion)'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+    
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(terraformDirectory)'
+        backendServiceArm: '${{ parameters.environment }}-service-connection'
+        backendAzureRmResourceGroupName: '$(backendResourceGroup)'
+        backendAzureRmStorageAccountName: '$(backendStorageAccount)'
+        backendAzureRmContainerName: '$(backendContainerName)'
+        backendAzureRmKey: '$(backendKey)'
+    
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Validate'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '$(terraformDirectory)'
+    
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: '$(terraformDirectory)'
+        environmentServiceNameAzureRM: '${{ parameters.environment }}-service-connection'
+        commandOptions: '-var-file="environments/${{ parameters.environment }}.tfvars" -out=$(System.DefaultWorkingDirectory)/terraform.tfplan'
+
+- stage: Deploy
+  displayName: 'Deploy Landing Zone'
+  dependsOn: Validate
+  condition: succeeded()
+  jobs:
+  - deployment: DeployLandingZone
+    displayName: 'Deploy Landing Zone'
+    environment: '${{ parameters.environment }}'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureCLI@2
+            displayName: 'Azure Login'
+            inputs:
+              azureSubscription: '${{ parameters.environment }}-service-connection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az --version
+                az account show
+          
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform $(terraformVersion)'
+            inputs:
+              terraformVersion: '$(terraformVersion)'
+          
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(terraformDirectory)'
+              backendServiceArm: '${{ parameters.environment }}-service-connection'
+              backendAzureRmResourceGroupName: '$(backendResourceGroup)'
+              backendAzureRmStorageAccountName: '$(backendStorageAccount)'
+              backendAzureRmContainerName: '$(backendContainerName)'
+              backendAzureRmKey: '$(backendKey)'
+          
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              workingDirectory: '$(terraformDirectory)'
+              environmentServiceNameAzureRM: '${{ parameters.environment }}-service-connection'
+              commandOptions: '-var-file="environments/${{ parameters.environment }}.tfvars" -auto-approve'
