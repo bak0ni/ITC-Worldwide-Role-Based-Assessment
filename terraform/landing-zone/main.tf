@@ -64,7 +64,6 @@ resource "azurerm_virtual_network" "itn-pyt-vnet" {
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
@@ -149,7 +148,10 @@ resource "azurerm_point_to_site_vpn_gateway" "frcvwan-p2sgw" {
     internet_security_enabled = true
     vpn_client_address_pool {
       address_prefixes = [
-        "10.10.12.0/24",
+        "10.1.10.0/24", "10.2.10.0/24",
+        "10.3.10.0/24", "10.4.10.0/24",
+        "10.5.10.0/24", "10.6.10.0/24",
+        "10.7.10.0/24", "10.8.10.0/24"
       ]
     }
   }
@@ -227,27 +229,25 @@ resource "azurerm_virtual_network" "itn-game-vnet" {
   location            = "Italy North"
 
   address_space = [
-    var.region-2-vnet-1-cidr,
+    var.itn-game-vnet-cidr,
   ]
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
-resource "azurerm_virtual_network" "itn-spec-vnet2" {
+resource "azurerm_virtual_network" "itn-spec-vnet" {
   resource_group_name = azurerm_resource_group.itn-rg.name
   name                = "itn-spec-vnet"
   location            = "Italy North"
 
   address_space = [
-    var.region-2-vnet-1-cidr,
+    var.itn-spec-vnet-cidr,
   ]
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
@@ -257,12 +257,11 @@ resource "azurerm_virtual_network" "uks-pyt-vnet" {
   location            = "UK South"
 
   address_space = [
-    var.region-2-vnet-1-cidr,
+    var.uks-pyt-vnet-cidr,
   ]
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
@@ -273,41 +272,38 @@ resource "azurerm_virtual_network" "uks-dotnet-vnet" {
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
-resource "azurerm_virtual_network" "uks-game-vnet2" {
+resource "azurerm_virtual_network" "uks-game-vnet" {
   resource_group_name = azurerm_resource_group.uks-rg.name
   name                = "uks-game-vnet"
   location            = "UK South"
 
   address_space = [
-    var.region-2-vnet-1-cidr,
+    var.uks-game-vnet-cidr,
   ]
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
-resource "azurerm_virtual_network" "uks-spec-vnet3" {
+resource "azurerm_virtual_network" "uks-spec-vnet" {
   resource_group_name = azurerm_resource_group.uks-rg.name
   name                = "uks-spec-vnet"
   location            = "UK South"
 
   address_space = [
-    var.region-2-vnet-1-cidr,
+    var.uks-spec-vnet-cidr,
   ]
 
   tags = {
     env      = "Development"
-    archUUID = "e73c36a8-b2c5-493f-a02d-dfc0d0830f7b"
   }
 }
 
-resource "azurerm_virtual_network" "frc-game-vnet2" {
+resource "azurerm_virtual_network" "frc-game-vnet" {
   tags                = merge(var.tags, {})
   resource_group_name = azurerm_resource_group.frc-rg.name
   name                = "frc-game-vnet"
@@ -359,7 +355,7 @@ resource "azurerm_virtual_hub_connection" "region1-connection12" {
   name           = "conn-vnet1-to-vwan-hub"
 }
 
-resource "azurerm_virtual_network" "frc-spec-vnet3" {
+resource "azurerm_virtual_network" "frc-spec-vnet" {
   tags                = merge(var.tags, {})
   resource_group_name = azurerm_resource_group.frc-rg.name
   name                = "frc-spec-vnet"
