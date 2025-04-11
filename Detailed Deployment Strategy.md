@@ -9,8 +9,6 @@
 
     -   Enable versioning and soft delete for state file protection
 
-    -   Configure private endpoints for secure access
-
 2.  **Azure Virtual WAN Deployment**
 
     -   Deploy a single Virtual WAN with one hub in a central location
@@ -41,6 +39,14 @@
 
     -   Configure split tunneling and route tables for optimal traffic
         flow
+
+5.  **Azure DevOps Pipeline creation for the above Infrastructure**
+
+    -   Create app registration with adequate permissions and Azure DevOps service connection
+
+    -   Infrastructure as Code (IaC) with Terraform
+
+    -   CI/CD via Azure DevOps Pipeline
 
 **Phase 2: Virtual Desktop Infrastructure**
 
