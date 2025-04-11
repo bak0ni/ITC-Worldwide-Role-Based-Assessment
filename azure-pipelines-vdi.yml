@@ -1,0 +1,165 @@
+# azure-pipelines-vdi.yml
+name: 'Azure VDI Dynamic Deployment'
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - 'terraform/vdi/**'
+
+parameters:
+- name: environment
+  displayName: 'Environment to deploy'
+  type: string
+  default: 'development'
+  values:
+  - 'development'
+  - 'production'
+- name: targetVnets
+  displayName: 'Target vNets for VDI deployment'
+  type: object
+  default:
+    - name: 'vnet1-region1'
+      deploy: true
+    - name: 'vnet2-region1'
+      deploy: false
+    - name: 'vnet3-region1'
+      deploy: false
+    - name: 'vnet4-region1'
+      deploy: false
+    - name: 'vnet1-region2'
+      deploy: false
+    - name: 'vnet2-region2'
+      deploy: false
+    - name: 'vnet3-region2'
+      deploy: false
+    - name: 'vnet4-region2'
+      deploy: false
+    - name: 'vnet1-region3'
+      deploy: false
+    - name: 'vnet2-region3'
+      deploy: false
+    - name: 'vnet3-region3'
+      deploy: false
+    - name: 'vnet4-region3'
+      deploy: false
+
+variables:
+  - group: terraform-secrets-${{ parameters.environment }}
+  - name: terraformVersion
+    value: '1.6.6'
+  - name: terraformDirectory
+    value: '$(System.DefaultWorkingDirectory)/terraform/vdi'
+  - name: backendResourceGroup
+    value: 'terraform-state-${{ parameters.environment }}-rg'
+  - name: backendStorageAccount
+    value: 'tfstate${{ parameters.environment }}sa'
+  - name: backendContainerName
+    value: 'tfstate'
+
+stages:
+- stage: Validate
+  displayName: 'Validate VDI Configuration'
+  jobs:
+  - job: Validate
+    displayName: 'Validate'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Azure Login'
+      inputs:
+        azureSubscription: '${{ parameters.environment }}-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az --version
+          az account show
+    
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform $(terraformVersion)'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+    
+    - task: PowerShell@2
+      displayName: 'Generate VDI Target Configuration'
+      inputs:
+        targetType: 'inline'
+        script: |
+          $targetVnets = ConvertFrom-Json '$(ConvertToJson(parameters.targetVnets))'
+          $deployVnets = @()
+          foreach ($vnet in $targetVnets) {
+            if ($vnet.deploy -eq $true) {
+              $deployVnets += $vnet.name
+            }
+          }
+          $deployConfig = @{
+            target_vnets = $deployVnets
+          } | ConvertTo-Json
+          Set-Content -Path "$(System.DefaultWorkingDirectory)/terraform/vdi/vdi_targets.json" -Value $deployConfig
+          Get-Content -Path "$(System.DefaultWorkingDirectory)/terraform/vdi/vdi_targets.json"
+
+- ${{ each vnet in parameters.targetVnets }}:
+  - ${{ if eq(vnet.deploy, true) }}:
+    - stage: Deploy_${{ replace(vnet.name, '-', '_') }}
+      displayName: 'Deploy VDI to ${{ vnet.name }}'
+      dependsOn: Validate
+      condition: succeeded()
+      variables:
+        backendKey: 'vdi-${{ vnet.name }}.tfstate'
+      jobs:
+      - deployment: DeployVDI
+        displayName: 'Deploy VDI'
+        environment: '${{ parameters.environment }}'
+        pool:
+          vmImage: 'ubuntu-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - task: AzureCLI@2
+                displayName: 'Azure Login'
+                inputs:
+                  azureSubscription: '${{ parameters.environment }}-service-connection'
+                  scriptType: 'bash'
+                  scriptLocation: 'inlineScript'
+                  inlineScript: |
+                    az --version
+                    az account show
+              
+              - task: TerraformInstaller@0
+                displayName: 'Install Terraform $(terraformVersion)'
+                inputs:
+                  terraformVersion: '$(terraformVersion)'
+              
+              - task: TerraformTaskV4@4
+                displayName: 'Terraform Init'
+                inputs:
+                  provider: 'azurerm'
+                  command: 'init'
+                  workingDirectory: '$(terraformDirectory)'
+                  backendServiceArm: '${{ parameters.environment }}-service-connection'
+                  backendAzureRmResourceGroupName: '$(backendResourceGroup)'
+                  backendAzureRmStorageAccountName: '$(backendStorageAccount)'
+                  backendAzureRmContainerName: '$(backendContainerName)'
+                  backendAzureRmKey: '$(backendKey)'
+              
+              - task: TerraformTaskV4@4
+                displayName: 'Terraform Plan'
+                inputs:
+                  provider: 'azurerm'
+                  command: 'plan'
+                  workingDirectory: '$(terraformDirectory)'
+                  environmentServiceNameAzureRM: '${{ parameters.environment }}-service-connection'
+                  commandOptions: '-var-file="environments/${{ parameters.environment }}.tfvars" -var="target_vnet=${{ vnet.name }}" -out=$(System.DefaultWorkingDirectory)/terraform-${{ vnet.name }}.tfplan'
+              
+              - task: TerraformTaskV4@4
+                displayName: 'Terraform Apply'
+                inputs:
+                  provider: 'azurerm'
+                  command: 'apply'
+                  workingDirectory: '$(terraformDirectory)'
+                  environmentServiceNameAzureRM: '${{ parameters.environment }}-service-connection'
+                  commandOptions: '$(System.DefaultWorkingDirectory)/terraform-${{ vnet.name }}.tfplan'
