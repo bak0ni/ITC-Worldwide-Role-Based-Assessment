@@ -1,0 +1,39 @@
+#Prerequisites
+
+# An Azure AD tenant with appropriate Microsoft Graph permissions:
+#  -Policy.ReadWrite.ConditionalAccess
+#  -Application.Read.All
+#  -Directory.Read.All
+
+# A registered app in Azure AD with client credentials (Client ID and Secret)
+
+#Installation Instructions
+
+# Save the previuos code as a file named ConditionalAccessMFAPolicy.psm1
+# Import the module: Import-Module .\ConditionalAccessMFAPolicy.psm1
+
+#How to Use
+
+# Create the MFA policies
+$policies = New-MFAConditionalAccessPolicy `
+    -PolicyName "MFA for All Users" `
+    -BreakglassUPN "breakglass@yourdomain.com" `
+    -ClientId "your-client-id" `
+    -ClientSecret "your-client-secret"
+
+# This will create two policies:
+# 1. A base policy requiring MFA for all users except the breakglass account
+# 2. An admin policy requiring MFA renewal every 2 hours for admin roles
+
+# To update a policy (e.g., disable it temporarily)
+Update-MFAConditionalAccessPolicy `
+    -PolicyId $policies.BasePolicy.id `
+    -State "disabled" `
+    -ClientId "your-client-id" `
+    -ClientSecret "your-client-secret"
+
+# To remove a policy
+Remove-MFAConditionalAccessPolicy `
+    -PolicyId $policies.AdminPolicy.id `
+    -ClientId "your-client-id" `
+    -ClientSecret "your-client-secret"
